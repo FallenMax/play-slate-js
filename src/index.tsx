@@ -11,15 +11,28 @@ import {
   Transforms,
 } from 'slate'
 // Import the Slate components and React plugin.
-import { Editable, ReactEditor, Slate, withReact } from 'slate-react'
+import { withHistory } from 'slate-history'
+import {
+  Editable,
+  ReactEditor,
+  RenderElementProps,
+  RenderLeafProps,
+  Slate,
+  withReact,
+} from 'slate-react'
 
 // Define State
-type CustomElement = { type: 'paragraph'; children: CustomText[] }
-type CustomText = { text: string; bold?: boolean }
+type CustomElement = {
+  type: 'code' | null
+  bold?: boolean
+  children: CustomText[]
+}
+type CustomText = { type: undefined; text: string; bold?: boolean }
+type CustomEditor = BaseEditor & ReactEditor & CustomElement
 
 declare module 'slate' {
   interface CustomTypes {
-    Editor: BaseEditor & ReactEditor
+    Editor: CustomEditor
     Element: CustomElement
     Text: CustomText
   }
@@ -50,7 +63,7 @@ const CodeElement = (props) => {
   )
 }
 
-const renderElement = (props) => {
+const renderElement = (props: RenderElementProps) => {
   switch (props.element.type) {
     case 'code':
       return <CodeElement {...props} />
@@ -60,13 +73,13 @@ const renderElement = (props) => {
 }
 
 // Define a leaf rendering function that is memoized with `useCallback`.
-const renderLeaf = (props) => {
+const renderLeaf = (props: RenderLeafProps) => {
   return <Leaf {...props} />
 }
 
 // Define our own custom set of helpers.
 const CustomEditor = {
-  isBoldMarkActive(editor) {
+  isBoldMarkActive(editor: Editor) {
     const [match] = Editor.nodes(editor, {
       match: (n) => n.bold === true,
       universal: true,
@@ -75,7 +88,7 @@ const CustomEditor = {
     return !!match
   },
 
-  isCodeBlockActive(editor) {
+  isCodeBlockActive(editor: Editor) {
     const [match] = Editor.nodes(editor, {
       match: (n) => n.type === 'code',
     })
@@ -83,7 +96,7 @@ const CustomEditor = {
     return !!match
   },
 
-  toggleBoldMark(editor) {
+  toggleBoldMark(editor: Editor) {
     const isActive = CustomEditor.isBoldMarkActive(editor)
     Transforms.setNodes(
       editor,
@@ -92,7 +105,7 @@ const CustomEditor = {
     )
   },
 
-  toggleCodeBlock(editor) {
+  toggleCodeBlock(editor: Editor) {
     const isActive = CustomEditor.isCodeBlockActive(editor)
     Transforms.setNodes(
       editor,
@@ -103,7 +116,7 @@ const CustomEditor = {
 }
 
 const App = () => {
-  const editor = useMemo(() => withReact(createEditor()), [])
+  const editor = useMemo(() => withReact(withHistory(createEditor())), [])
 
   // Add the initial value when setting up our state.
   const [value, setValue] = useState<Descendant[]>(
